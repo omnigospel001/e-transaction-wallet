@@ -12,7 +12,7 @@ E-Transaction Wallet is a robust backend service designed to handle digital wall
 
 ---
 
-## 🛠 Technologies Used
+## Technologies Used
 
 ### Core Framework
 - **Java 25** - Latest Java LTS version
