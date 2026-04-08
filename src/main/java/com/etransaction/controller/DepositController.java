@@ -5,6 +5,7 @@ import com.etransaction.response.TransactionResponse;
 import com.etransaction.service.DepositService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,12 +20,12 @@ public class DepositController {
         this.depositService = depositService;
     }
 
-    @PostMapping("/deposit/{id}")
+    @PostMapping("/deposit")
     public ResponseEntity<TransactionResponse> makePayment(@RequestHeader("Idempotency-Key") String idempotencyKey,
                                                            @Valid @RequestBody DepositRequest depositRequest,
-                                                           @PathVariable Long id) {
+                                                           Authentication connectedUser) {
 
 
-        return ResponseEntity.ok().body(depositService.deposit(depositRequest, idempotencyKey, id));
+        return ResponseEntity.ok().body(depositService.deposit(depositRequest, idempotencyKey, connectedUser));
     }
 }

@@ -14,6 +14,7 @@ import com.etransaction.response.TransactionResponse;
 import com.etransaction.service.DepositService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,18 +40,12 @@ public class DepositServiceImpl implements DepositService {
 
     @Override
     @Transactional
-    public TransactionResponse deposit(DepositRequest depositRequest, String idempotencyKey, Long id) {
+    public TransactionResponse deposit(DepositRequest depositRequest, String idempotencyKey, Authentication currentUser) {
+
+        User user = (User) currentUser.getPrincipal();
 
         String responseKey = "idem:transfer:" + idempotencyKey;
         String lockKey = responseKey + ":lock";
-
-        TransactionResponse cached =
-                (TransactionResponse) redisTemplate.opsForValue().get(responseKey);
-
-        if (cached != null) {
-            log.info("Returning cached response for key={}", idempotencyKey);
-            return cached;
-        }
 
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "LOCK", Duration.ofSeconds(30));
@@ -60,34 +55,25 @@ public class DepositServiceImpl implements DepositService {
                     "Duplicate request in progress. Please wait...");
         }
 
-        try{
-
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("Employee not found"));
+        //
+        User userFound = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("User not found"));
 
         //
-        walletRepository.save(DepositWalletMapper.wallet(user, depositRequest));
+        walletRepository.save(DepositWalletMapper.wallet(userFound, depositRequest));
 
         //
-        historyRepository.save(DepositMapper.makePayment(user,depositRequest));
+        historyRepository.save(DepositMapper.makePayment(userFound, depositRequest));
 
-        var transactionResponse = new TransactionResponse(
-                user.getFirstName(),
-                user.getLastName(),
-                user.getAccountNumber(),
-                user.getPhone(),
+        return new TransactionResponse(
+                userFound.getFirstName(),
+                userFound.getLastName(),
+                userFound.getAccountNumber(),
+                userFound.getPhone(),
                 TransactionStatus.PAYMENT_SUCCESSFUL,
                 UUID.randomUUID().toString(),
                 depositRequest.getAmount(),
                 "SELF_DEPOSIT"
         );
-
-            redisTemplate.opsForValue()
-                    .set(responseKey, transactionResponse, Duration.ofMinutes(5));
-
-            return transactionResponse;
-        } finally {
-            redisTemplate.delete(lockKey);
-        }
     }
 
 }

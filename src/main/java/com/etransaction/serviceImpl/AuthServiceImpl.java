@@ -2,8 +2,9 @@ package com.etransaction.serviceImpl;
 
 import com.etransaction.entity.User;
 import com.etransaction.exception.InvalidPasswordException;
+import com.etransaction.exception.UserWithEmailAlreadyExistException;
+import com.etransaction.exception.UserWithPhoneAlreadyExistException;
 import com.etransaction.mapper.UserMapper;
-import com.etransaction.mapper.WalletDefaultMapper;
 import com.etransaction.repository.UserRepository;
 import com.etransaction.repository.WalletRepository;
 import com.etransaction.request.LoginRequest;
@@ -17,9 +18,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-
-import java.security.SecureRandom;
 
 @Slf4j
 @Service
@@ -66,19 +64,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User register(UserRequest userRequest) {
 
-        var user = userRepository.save(UserMapper.createUser(userRequest));
+        if (userRepository.findByEmail(userRequest.getEmail()).isPresent()) {
+            throw new UserWithEmailAlreadyExistException("User with this email already exist");
+        }
 
-        var wallet =  walletRepository.save(WalletDefaultMapper.wallet(user));
-        log.info("Default value is stored in AccountManagement: {} ", wallet);
+        if (userRepository.findByEmail(userRequest.getPhone()).isPresent()) {
+            throw new UserWithPhoneAlreadyExistException("User with this phone number already exist");
+        }
 
-        return user;
-    }
-
-
-    public static long generateCardNumber(){
-        SecureRandom secureRandom = new SecureRandom();
-        long upperBound = 1_000_000_000_000_000L; //generates 6 secure random numbers
-        return secureRandom.nextLong(upperBound);
+        return userRepository.save(UserMapper.createUser(userRequest));
     }
 
 

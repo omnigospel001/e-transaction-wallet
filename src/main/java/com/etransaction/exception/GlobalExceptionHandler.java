@@ -50,59 +50,73 @@ public class GlobalExceptionHandler {
     }
 
 
-    @ExceptionHandler
+    @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<?> userNotFoundException(UserNotFoundException userNotFoundException) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 userNotFoundException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(RequestCannotBeNullException.class)
     public ResponseEntity<?> requestCannotBeNullException(RequestCannotBeNullException requestCannotBeNullException) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 requestCannotBeNullException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(LowerAmountException.class)
     public ResponseEntity<?> lowerAmountException(LowerAmountException lowerAmountException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 lowerAmountException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(YouCannotSendMoneyToYourselfException.class)
     public ResponseEntity<?> youCannotSendMoneyToYourselfException(YouCannotSendMoneyToYourselfException moneyToYourselfException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 moneyToYourselfException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(DuplicateDepositRequestException.class)
     public ResponseEntity<?> duplicateDepositRequestException(DuplicateDepositRequestException depositRequestException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 depositRequestException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(InsufficientBalanceException.class)
     public ResponseEntity<?> insufficientBalanceException(InsufficientBalanceException insufficientBalanceException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 insufficientBalanceException.getMessage()
         );
     }
 
-    @ExceptionHandler
-    public ResponseEntity<?> insufficientBalanceException(DuplicateWithdrawalRequestException requestException) {
+    @ExceptionHandler(DuplicateWithdrawalRequestException.class)
+    public ResponseEntity<?> duplicateWithdrawalRequestException(DuplicateWithdrawalRequestException requestException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 requestException.getMessage()
         );
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(InvalidPasswordException.class)
     public ResponseEntity<?> invalidPasswordException(InvalidPasswordException passwordException) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 passwordException.getMessage()
+        );
+    }
+
+    @ExceptionHandler(UserWithEmailAlreadyExistException.class)
+    public ResponseEntity<?> userAlreadyExistException(UserWithEmailAlreadyExistException alreadyExistException) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                alreadyExistException.getMessage()
+        );
+    }
+
+    @ExceptionHandler(UserWithPhoneAlreadyExistException.class)
+    public ResponseEntity<?> userWithPhoneAlreadyExistException(UserWithPhoneAlreadyExistException alreadyExistException) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                alreadyExistException.getMessage()
         );
     }
 }

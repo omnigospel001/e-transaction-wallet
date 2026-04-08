@@ -1,25 +1,67 @@
 spring:
   application:
-    name: etransactions
+    name: e-transaction-wallet
+
 
   datasource:
-    driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:gospel_db
-    username: sa
-    password:
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:mysql://localhost:3306/e_wallet?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+    username: root
+    password: mysecretpassword
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database: mysql
 
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    consumer:
+      group-id: transfer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.value.default.type: com.etransaction.response.TransferNotificationResponse
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.type.mapping: transferNotificationResponse:com.etransaction.response.TransferNotificationResponse
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: transferNotificationResponse:com.etransaction.kafka.TransferNotificationRequest
+
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: gosmajesty@gmail.com
+    password: noaexrabuvxhdbqb
+    protocol: smtp
+    subject: Gospel's E-Transaction Wallet
+    properties:
+      mail:
+        debug: true
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   data:
     redis:
       host: localhost
       port: 6379
 
+  company:
+    name: Gospel's Wallet App
+
 server:
   port: 9090
-
 
 jwt:
   secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5911}
@@ -38,11 +80,18 @@ logging:
         security: DEBUG
 
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info
+#retry:
+#  max-attempts: 4
+#  initial-interval-ms: 500
+#  multiplier: 2.0
 
 
-
+#  datasource:
+#    driver-class-name: org.h2.Driver
+#    url: jdbc:h2:mem:gospel_db
+#    username: sa
+#    password:
+#  h2:
+#    console:
+#      enabled: true
+#      path: /h2-console

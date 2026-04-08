@@ -15,6 +15,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,25 +44,29 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @CachePut(value = "users", key = "#id")
-    public UserResponse updateUser(Long id, UpdateUserRequest updateUserRequest) {
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("User not found"));
+    @CachePut(value = "users", key = "#currentUser")
+    public UserResponse updateUser(Authentication currentUser, UpdateUserRequest updateUserRequest) {
+
+        User user = (User) currentUser.getPrincipal();
+
+        User userFound = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("User not found"));
 
         //
-        user.setFirstName(updateUserRequest.getFirstName());
-        user.setLastName(updateUserRequest.getLastName());
-        user.setEmail(updateUserRequest.getEmail());
-        user.setPhone(updateUserRequest.getPhone());
+        userFound.setFirstName(updateUserRequest.getFirstName());
+        userFound.setLastName(updateUserRequest.getLastName());
+        userFound.setEmail(updateUserRequest.getEmail());
+        userFound.setPhone(updateUserRequest.getPhone());
 
-        return UserMapper.updateUser(user);
+        return UserMapper.updateUser(userFound);
     }
 
     @Override
     @Transactional
-    @Cacheable(value = "users", key = "#id")
-    public UserResponse findById(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("User not found"));
-        return UserMapper.userResponse(user);
+    @Cacheable(value = "users", key = "#connectedUser")
+    public UserResponse findById(Authentication connectedUser) {
+        User user = (User)connectedUser.getPrincipal();
+        User found = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("User not found"));
+        return UserMapper.userResponse(found);
     }
 
     @Override
@@ -78,10 +83,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @CacheEvict(value = "users", key = "#id")
-    public void delete(Long id) {
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("No user not available to delete"));
+    @CacheEvict(value = "users", key = "#currentUser")
+    public void delete(Authentication currentUser) {
+
+        User user = (User) currentUser.getPrincipal();
+
+        User userFound = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("No user not available to delete"));
         userRepository.delete(user);
-        log.info("User with id: {} is deleted", id );
+        log.info("User with id: {} is deleted", userFound.getId());
     }
 }

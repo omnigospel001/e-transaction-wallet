@@ -5,6 +5,7 @@ import com.etransaction.response.TransactionResponse;
 import com.etransaction.service.WithdrawalService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -18,12 +19,12 @@ public class WithdrawalController {
         this.withdrawalService = withdrawalService;
     }
 
-    @PostMapping("/withdraw/{id}")
+    @PostMapping("/withdraw")
     public ResponseEntity<TransactionResponse> makePayment(@RequestHeader("Idempotency-Key") String idempotencyKey,
                                                            @Valid @RequestBody WithdrawalRequest withdrawalRequest,
-                                                           @PathVariable Long id) {
+                                                           Authentication connectedUser) {
 
 
-        return ResponseEntity.ok().body(withdrawalService.withdraw(withdrawalRequest, idempotencyKey, id));
+        return ResponseEntity.ok().body(withdrawalService.withdraw(withdrawalRequest, idempotencyKey, connectedUser));
     }
 }

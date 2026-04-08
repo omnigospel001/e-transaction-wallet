@@ -8,6 +8,7 @@ import com.etransaction.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,17 +31,17 @@ public class UserController {
     }
 
 
-    @PutMapping("/update/{id}")
+    @PutMapping("/update")
     public ResponseEntity<UserResponse> updateUser(@Valid @RequestBody UpdateUserRequest updateUserRequest,
-                                                   @PathVariable Long id) {
+                                                   Authentication connectedUser) {
 
-        return ResponseEntity.ok().body(userService.updateUser(id, updateUserRequest));
+        return ResponseEntity.ok().body(userService.updateUser(connectedUser, updateUserRequest));
     }
 
-    @GetMapping("/find/{id}")
-    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
+    @GetMapping("/find")
+    public ResponseEntity<UserResponse> findById(@PathVariable Authentication connectedUser) {
 
-        return ResponseEntity.ok().body(userService.findById(id));
+        return ResponseEntity.ok().body(userService.findById(connectedUser));
     }
 
 
@@ -55,9 +56,9 @@ public class UserController {
     }
 
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        userService.delete(id);
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> delete(@PathVariable Authentication connectedUser) {
+        userService.delete(connectedUser);
         return ResponseEntity.ok().build();
     }
 

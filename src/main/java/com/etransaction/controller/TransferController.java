@@ -5,6 +5,7 @@ import com.etransaction.response.TransactionResponse;
 import com.etransaction.service.TransferService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -19,14 +20,14 @@ public class TransferController {
         this.transferService = transferService;
     }
 
-    @PostMapping("/transfer/{id}")
+    @PostMapping("/transfer")
     public ResponseEntity<TransactionResponse> makePayment(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody TransferRequest request,
-            @PathVariable Long id) {
+            Authentication connectedUser) {
 
         return ResponseEntity.ok(
-                transferService.makePayment(id, idempotencyKey, request)
+                transferService.makePayment(connectedUser, idempotencyKey, request)
         );
     }
 }

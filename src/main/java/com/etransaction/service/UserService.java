@@ -5,6 +5,7 @@ import com.etransaction.request.UpdateUserRequest;
 import com.etransaction.request.UserRequest;
 import com.etransaction.response.UserResponse;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -12,12 +13,12 @@ public interface UserService {
 
     List<User> registerMany(List<UserRequest> userRequest);
 
-    UserResponse updateUser(Long id, UpdateUserRequest updateUserRequest);
+    UserResponse updateUser(Authentication connectedUser, UpdateUserRequest updateUserRequest);
 
-    UserResponse findById(Long id);
+    UserResponse findById(Authentication connectedUser);
 
     Page<UserResponse> findAll(Integer page, Integer size);
 
-    void delete(Long id);
+    void delete(Authentication connectedUser);
 
 }

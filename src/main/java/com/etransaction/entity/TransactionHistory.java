@@ -24,29 +24,12 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class TransactionHistory extends CommonEntity {
 
-    @NotNull(message = "Amount is required")
-    @Positive(message = "amount must be positive")
-    @Min(value = 100, message = "Amount must not be less than 100 Naira")
-    @Max(value = 5_000_000, message = "Amount must not be greater than 5 Million")
     private BigDecimal amount;
-
-    @NotBlank(message = "First name is required")
-    @Size(min = 3, max = 30, message = "First Name must be between 3 to 30 letters")
     private String firstName;
-
-    @NotBlank(message = "Last name is required")
-    @Size(min = 3, max = 30, message = "Last Name must be between 3 to 30 letters")
     private String lastName;
-
-    @NotNull(message = "Account Number is required")
     private Long accountNumber;
-
-    @NotBlank(message = "Email is required")
-    @Size(min = 3, max = 30)
     private String email;
 
-    @NotBlank(message = "Phone number is required")
-    @Size(min = 3, max = 30)
     private String phone;
 
     private String transactionId;

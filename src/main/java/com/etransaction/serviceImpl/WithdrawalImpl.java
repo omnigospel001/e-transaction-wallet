@@ -1,8 +1,10 @@
 package com.etransaction.serviceImpl;
 
 import com.etransaction.entity.User;
+import com.etransaction.entity.Wallet;
 import com.etransaction.enums.TransactionStatus;
 import com.etransaction.exception.DuplicateTransferRequestException;
+import com.etransaction.exception.InsufficientBalanceException;
 import com.etransaction.exception.UserNotFoundException;
 import com.etransaction.mapper.WithdrawalMapper;
 import com.etransaction.mapper.WithdrawalWalletMapper;
@@ -12,11 +14,15 @@ import com.etransaction.repository.WalletRepository;
 import com.etransaction.request.WithdrawalRequest;
 import com.etransaction.response.TransactionResponse;
 import com.etransaction.service.WithdrawalService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -28,28 +34,25 @@ public class WithdrawalImpl implements WithdrawalService {
     private final TransactionHistoryRepository historyRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final WalletRepository walletRepository;
+    private final EntityManager entityManager;
 
-    public WithdrawalImpl(UserRepository userRepository, TransactionHistoryRepository historyRepository, RedisTemplate<String, Object> redisTemplate, WalletRepository walletRepository) {
+
+    public WithdrawalImpl(UserRepository userRepository, TransactionHistoryRepository historyRepository, RedisTemplate<String, Object> redisTemplate, WalletRepository walletRepository, EntityManager entityManager) {
         this.userRepository = userRepository;
         this.historyRepository = historyRepository;
         this.redisTemplate = redisTemplate;
         this.walletRepository =walletRepository;;
+        this.entityManager = entityManager;
     }
 
     @Override
     @Transactional
-    public TransactionResponse withdraw(WithdrawalRequest withdrawalRequest, String idempotencyKey, Long id) {
+    public TransactionResponse withdraw(WithdrawalRequest withdrawalRequest, String idempotencyKey, Authentication connectedUser) {
+
+        User user = (User) connectedUser.getPrincipal();
 
         String responseKey = "idem:transfer:" + idempotencyKey;
         String lockKey = responseKey + ":lock";
-
-        TransactionResponse cached =
-                (TransactionResponse) redisTemplate.opsForValue().get(responseKey);
-
-        if (cached != null) {
-            log.info("Returning cached response for key={}", idempotencyKey);
-            return cached;
-        }
 
         Boolean lockAcquired = redisTemplate.opsForValue()
                 .setIfAbsent(lockKey, "LOCK", Duration.ofSeconds(30));
@@ -59,32 +62,57 @@ public class WithdrawalImpl implements WithdrawalService {
                     "Duplicate request in progress. Please wait...");
         }
 
-        try{
-        User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException("User not found"));
+        //
+        User useFound = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        //withdrawal is done here
-        walletRepository.save(WithdrawalWalletMapper.wallet(user, withdrawalRequest));
+        Query queryCount = entityManager.createNativeQuery("SELECT COUNT(user_id) FROM wallet WHERE user_id =:user_id");
+
+        queryCount.setParameter("user_id", useFound.getId());
+
+        long UserIdCount = (Long) queryCount.getSingleResult();
+
+        // Remember BODMAS RULE (Bracket-> Order-> Division-> Multiplication-> Addition-> Subtraction)
+        // Procedure, we have Open-Bracket-Multiplication then Summation -> Division -> Multiplied by the User-DB-Count, then Subtraction from main account balance
+        Query query  =  entityManager.createNativeQuery("UPDATE wallet SET amount = amount - "+ withdrawalRequest.getAmount() +" / " + UserIdCount + " WHERE user_id =:user_id " );
+
+        query.setParameter("user_id", useFound.getId());
+
+        query.executeUpdate();
+
+
+        //I'm accounting for balance sufficiency
+        insufficientBalance(user, withdrawalRequest);
 
         //
-        historyRepository.save(WithdrawalMapper.makePayment(user, withdrawalRequest));
+        historyRepository.save(WithdrawalMapper.makePayment(useFound, withdrawalRequest));
 
-        var transactionResponse = new TransactionResponse(
-                user.getFirstName(),
-                user.getLastName(),
-                user.getAccountNumber(),
-                user.getPhone(),
+        return new TransactionResponse(
+                useFound.getFirstName(),
+                useFound.getLastName(),
+                useFound.getAccountNumber(),
+                useFound.getPhone(),
                 TransactionStatus.PAYMENT_SUCCESSFUL,
                 UUID.randomUUID().toString(),
                 withdrawalRequest.getAmount(),
                 "SELF_WITHDRAWAL"
         );
+    }
 
-            redisTemplate.opsForValue()
-                    .set(responseKey, transactionResponse, Duration.ofMinutes(5));
+    public User insufficientBalance(User user, WithdrawalRequest withdrawalRequest) {
 
-            return transactionResponse;
-        } finally {
-            redisTemplate.delete(lockKey);
+        User userFound = userRepository.findById(user.getId()).orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Query query  =  entityManager.createNativeQuery("SELECT SUM(amount) FROM wallet WHERE user_id =:user_id" );
+
+        query.setParameter("user_id", userFound.getId());
+
+        BigDecimal totalAmount = (BigDecimal) query.getSingleResult();
+
+        //BigDecimal LIMIT_DEPOSIT_AMOUNT = new BigDecimal("100.00");
+        if (totalAmount.doubleValue() <= withdrawalRequest.getAmount().doubleValue()){
+            throw new InsufficientBalanceException("Insufficient balance");
         }
+
+      return userFound;
     }
 }

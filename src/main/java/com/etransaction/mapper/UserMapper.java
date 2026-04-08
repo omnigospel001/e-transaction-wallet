@@ -3,6 +3,7 @@ package com.etransaction.mapper;
 import com.etransaction.entity.User;
 import com.etransaction.exception.RequestCannotBeNullException;
 import com.etransaction.exception.UserNotFoundException;
+import com.etransaction.repository.UserRepository;
 import com.etransaction.request.UserRequest;
 import com.etransaction.response.UserResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,9 +15,11 @@ import java.security.SecureRandom;
 public class UserMapper {
 
     private static PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
 
-    public UserMapper(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
+    public UserMapper(PasswordEncoder passwordEncoder, UserRepository userRepository) {
+        UserMapper.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
     }
 
 
